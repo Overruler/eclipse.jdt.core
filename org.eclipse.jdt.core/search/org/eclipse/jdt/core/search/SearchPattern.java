@@ -6,6 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
+ *     Timo Kinnunen - Contributions for bug 377373 - [subwords] known limitations with JDT 3.8
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package org.eclipse.jdt.core.search;
@@ -846,6 +847,57 @@ public static final int[] getMatchingRegions(String pattern, String name, int ma
 	return null;
 }
 
+/**
+ * Answers true if the pattern resembles the given simple name. The exact details 
+ * of the algorithm are left intentionally vague, however typically a prefix match
+ * or a Camel-Case match would be more strict than this algorithm. This method 
+ * is intended for filtering type name proposals in real-time based on user input, 
+ * for example during code completion. Simple type matching does NOT accept explicit 
+ * wild-cards '*' and '?' and may be case sensitive.
+ * 
+ * @param pattern the given pattern
+ * @param name the given name
+ * @return true if the pattern matches the given name, false otherwise
+ * @since 3.10
+ */
+public static boolean isSimpleTypeNameMatch(String pattern, String name) {
+	if (pattern == null) {
+		return true;
+	}
+	if (name == null) {
+		return false;
+	}
+	char[] patternChars = pattern.toCharArray();
+	char[] nameChars = name.toCharArray();
+	boolean camelCaseMatching = JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CODEASSIST_CAMEL_CASE_MATCH));
+	return !isFailedMatch(patternChars, nameChars, camelCaseMatching);
+}
+/**
+ * Answers true if the pattern resembles the given simple name. 
+ * 
+ * @see CharOperation#match(char[], char[], boolean) for more details on the
+ * 	pattern match behavior
+ * 
+ * @param pattern the given pattern
+ * @param name the given name
+ * @return true if the pattern matches the given name, false otherwise
+ * 
+ * @since 3.10
+ */
+public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
+	if (pattern == null) {
+		return true;
+	}
+	if (name == null) {
+		return false;
+	}
+	boolean camelCaseMatching = JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CODEASSIST_CAMEL_CASE_MATCH));
+	return !isFailedMatch(pattern, name, camelCaseMatching);
+}
+private static boolean isFailedMatch(char[] pattern, char[] name, boolean camelCaseMatch) {
+	return !CharOperation.match(CharOperation.concat('*', pattern, '*'), name, false/*ignore case*/)
+			&& !(pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name));
+}
 /**
  * Returns a search pattern that combines the given two patterns into an
  * "and" pattern. The search result will match both the left pattern and

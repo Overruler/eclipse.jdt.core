@@ -1,11 +1,12 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
+ * Copyright (c) 2000, 2013 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
+ *     Timo Kinnunen - Contributions for bug 377373 - [subwords] known limitations with JDT 3.8
  *     IBM Corporation - initial API and implementation
  *     Stephan Herrmann - contribution for bug 337868 - [compiler][model] incomplete support for package-info.java when using SearchableEnvironment
  *******************************************************************************/
@@ -586,7 +587,12 @@ public class SearchableEnvironment
 			};
 			
 			int matchRule = SearchPattern.R_PREFIX_MATCH;
-			if (camelCaseMatch) matchRule |= SearchPattern.R_CAMELCASE_MATCH;
+			if (camelCaseMatch) {
+				matchRule |= SearchPattern.R_CAMELCASE_MATCH;
+			} else {
+				matchRule = SearchPattern.R_PATTERN_MATCH;
+				simpleName = CharOperation.concat('*', simpleName, '*');
+			}
 			if (monitor != null) {
 				IndexManager indexManager = JavaModelManager.getIndexManager();
 				while (indexManager.awaitingJobsCount() > 0) {

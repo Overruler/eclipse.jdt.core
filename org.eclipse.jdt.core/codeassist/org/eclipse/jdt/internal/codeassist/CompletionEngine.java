@@ -7,6 +7,7 @@
  *
  * Contributors:
  *     Timo Kinnunen - Contributions for bug 377373 - [subwords] known limitations with JDT 3.8
+ *     							Bug 420953 - [subwords] Constructors that don't match prefix not found
  *     IBM Corporation - initial API and implementation
  *     Stephan Herrmann - Contribution for
  *								Bug 400874 - [1.8][compiler] Inference infrastructure should evolve to meet JLS8 18.x (Part G of JSR335 spec)
@@ -3871,6 +3872,18 @@ public final class CompletionEngine
 
 		if(this.expectedTypesPtr + 1 != this.expectedTypes.length) {
 			System.arraycopy(this.expectedTypes, 0, this.expectedTypes = new TypeBinding[this.expectedTypesPtr + 1], 0, this.expectedTypesPtr + 1);
+		}
+
+		try {
+			for (ReferenceBinding referenceBinding : SuperOrSubtypesCompletionHelper.findAdditionalExpectedTypes(this.typeRoot,
+					this.lookupEnvironment, this.nameEnvironment.nameLookup, this.expectedTypes, this.expectedTypesFilter == SUPERTYPE, this.expectedTypesFilter == SUBTYPE, this.monitor)) {
+				addExpectedType(referenceBinding, scope);
+			}
+		} catch (JavaModelException e) {
+			if (DEBUG) {
+				System.out.println("Exception caught by CompletionEngine:"); //$NON-NLS-1$
+				e.printStackTrace(System.out);
+			}
 		}
 	}
 

@@ -62,6 +62,9 @@ class SuperOrSubtypesCompletionHelper {
 			boolean subtypeOnly, IProgressMonitor monitor, NameLookup nameLookup, ITypeRoot typeRoot)
 			throws JavaModelException {
 		IType type = getITypeFromReferenceBinding(refBinding, nameLookup, typeRoot);
+		if(type == null) {
+			return new IType[0];
+		}
 
 		IType[] types;
 		if (supertypeOnly) {

@@ -26,9 +26,10 @@ public interface RelevanceConstants {
 	int R_CASE = 10;
 	int R_CAMEL_CASE = 5;
 	int R_EXACT_NAME = 4;
+	int R_PREFIX = 3;
 	int R_VOID = -5;
-	int R_EXPECTED_TYPE = 20;
-	int R_EXACT_EXPECTED_TYPE = 30;
+	int R_EXPECTED_TYPE = 30;
+	int R_EXACT_EXPECTED_TYPE = 20;
 	int R_INTERFACE = 20;
 	int R_CLASS = 20;
 	int R_ENUM = 20;

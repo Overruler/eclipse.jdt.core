@@ -4104,20 +4104,28 @@ public final class CompletionEngine
 			if(CharOperation.equals(token, proposalName, true /* do not ignore case */)) {
 				return R_CASE + R_EXACT_NAME;
 			} else if (CharOperation.prefixEquals(token, proposalName, true /* do not ignore case */)) {
-				return R_CASE;
+				return R_CASE + R_PREFIX;
 			} else if (CharOperation.camelCaseMatch(token, proposalName)){
 				return R_CAMEL_CASE;
-			} else if(CharOperation.equals(token, proposalName, false /* ignore case */)) {
-				return R_EXACT_NAME;
+			} else if(CharOperation.prefixEquals(token, proposalName, false /* ignore case */)) {
+				if(CharOperation.equals(token, proposalName, false /* ignore case */)) {
+					return R_EXACT_NAME;
+				} else {
+					return R_PREFIX;
+				}
 			}
 		} else if (CharOperation.prefixEquals(token, proposalName, true /* do not ignore case */)) {
 			if(CharOperation.equals(token, proposalName, true /* do not ignore case */)) {
 				return R_CASE + R_EXACT_NAME;
 			} else {
-				return R_CASE;
+				return R_CASE + R_PREFIX;
 			}
-		} else if(CharOperation.equals(token, proposalName, false /* ignore case */)) {
-			return R_EXACT_NAME;
+		} else if(CharOperation.prefixEquals(token, proposalName, false /* ignore case */)) {
+			if(CharOperation.equals(token, proposalName, false /* ignore case */)) {
+				return R_EXACT_NAME;
+			} else {
+				return R_PREFIX;
+			}
 		}
 		return 0;
 	}

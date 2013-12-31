@@ -226,6 +226,10 @@ public abstract class SearchPattern {
 	 */
 	public boolean mustResolve = true;
 	
+	private static final String CASE_INSENSITIVE_REGEX = "(?i)"; //$NON-NLS-1$
+	private static final String ANY_JAVA_IDENTIFIER_REGEX = "[\\p{javaJavaIdentifierPart}\\.]*"; //$NON-NLS-1$
+	private static final String ANY_CHARACTER_REGEX = ".*"; //$NON-NLS-1$
+
 /**
  * Creates a search pattern with the rule to apply for matching index keys.
  * It can be exact match, prefix match, pattern match or regexp match.
@@ -882,7 +886,7 @@ public static boolean isSimpleTypeNameMatch(String pattern, String name) {
  * @param name the given name
  * @return true if the pattern matches the given name, false otherwise
  * 
- * @since 3.10
+ * @since 3.9
  */
 public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
 	if (pattern == null) {
@@ -895,8 +899,17 @@ public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
 	return !isFailedMatch(pattern, name, camelCaseMatching);
 }
 private static boolean isFailedMatch(char[] pattern, char[] name, boolean camelCaseMatch) {
-	return !CharOperation.match(CharOperation.concat('*', pattern, '*'), name, false/*ignore case*/)
-			&& !(pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name));
+	return !isJavaNameMatch(pattern, name)
+			&& !isCamelCaseNameMatch(pattern, name, camelCaseMatch);
+}
+private static boolean isCamelCaseNameMatch(char[] pattern, char[] name, boolean camelCaseMatch) {
+	return pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name);
+}
+private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
+	String pattern = CASE_INSENSITIVE_REGEX + ANY_JAVA_IDENTIFIER_REGEX + new String(patternChars)
+			+ ANY_JAVA_IDENTIFIER_REGEX + ANY_CHARACTER_REGEX;
+	String name = new String(nameChars);
+	return name.matches(pattern);
 }
 /**
  * Returns a search pattern that combines the given two patterns into an

@@ -8712,7 +8712,7 @@ public final class CompletionEngine
 			relevance += computeRelevanceForStatic(onlyStaticMethods, method.isStatic());
 			relevance += computeRelevanceForQualification(prefixRequired);
 			relevance += computeRelevanceForRestrictions(IAccessRule.K_ACCESSIBLE);
-			if (onlyStaticMethods && this.insideQualifiedReference) {
+			if (this.insideQualifiedReference) {
 				relevance += computeRelevanceForInheritance(receiverType, method.declaringClass);
 			}
 			if (missingElements != null) {

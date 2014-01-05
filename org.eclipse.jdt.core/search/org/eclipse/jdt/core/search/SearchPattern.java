@@ -12,6 +12,7 @@
 package org.eclipse.jdt.core.search;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -228,7 +229,10 @@ public abstract class SearchPattern {
 	
 	private static final String CASE_INSENSITIVE_REGEX = "(?i)"; //$NON-NLS-1$
 	private static final String ANY_JAVA_IDENTIFIER_REGEX = "[\\p{javaJavaIdentifierPart}\\.]*"; //$NON-NLS-1$
-	private static final String ANY_CHARACTER_REGEX = ".*"; //$NON-NLS-1$
+	private static final String ALL_BUT_JAVA_IDENTIFIER_REGEX = "[^\\p{javaJavaIdentifierPart}]"; //$NON-NLS-1$
+	private static final String ANY_CHARACTERS_REGEX = ".*"; //$NON-NLS-1$
+	private static final String ANY_CHARACTER_REGEX = "."; //$NON-NLS-1$
+	private static final Pattern anyNonJavaIdentifier = Pattern.compile(ALL_BUT_JAVA_IDENTIFIER_REGEX);
 
 /**
  * Creates a search pattern with the rule to apply for matching index keys.
@@ -906,8 +910,9 @@ private static boolean isCamelCaseNameMatch(char[] pattern, char[] name, boolean
 	return pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name);
 }
 private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
-	String pattern = CASE_INSENSITIVE_REGEX + ANY_JAVA_IDENTIFIER_REGEX + new String(patternChars)
-			+ ANY_JAVA_IDENTIFIER_REGEX + ANY_CHARACTER_REGEX;
+	String inputPattern = anyNonJavaIdentifier.matcher(new String(patternChars)).replaceAll(ANY_CHARACTER_REGEX);
+	String pattern = CASE_INSENSITIVE_REGEX + ANY_JAVA_IDENTIFIER_REGEX + inputPattern + ANY_JAVA_IDENTIFIER_REGEX
+			+ ANY_CHARACTERS_REGEX;
 	String name = new String(nameChars);
 	return name.matches(pattern);
 }

@@ -36,6 +36,7 @@ import org.eclipse.jdt.internal.core.NameLookup;
 import org.eclipse.jdt.internal.core.Openable;
 
 class SuperOrSubtypesCompletionHelper {
+	private static final int MAX_RESULTS = 100;
 
 	static List<ReferenceBinding> findAdditionalExpectedTypes(ITypeRoot typeRoot, LookupEnvironment lookupEnvironment,
 			NameLookup nameLookup, TypeBinding[] expectedTypes, boolean supertypeOnly, boolean subtypeOnly,
@@ -48,11 +49,18 @@ class SuperOrSubtypesCompletionHelper {
 		}
 		List<ReferenceBinding> additionalReferenceTypes = new ArrayList<>();
 		for (ReferenceBinding referenceBinding : referenceTypes) {
+			if (referenceBinding.compoundName == null
+					|| CharOperation.toString(referenceBinding.compoundName).equals("java.lang.Object")) { //$NON-NLS-1$
+				continue;
+			}
 			IType[] types = getExpectedSuperOrSubtypes(referenceBinding, supertypeOnly, subtypeOnly, monitor,
 					nameLookup, typeRoot);
 			for (IType iType : types) {
 				ReferenceBinding referenceBindingFromIType = getReferenceBindingFromIType(iType, lookupEnvironment);
 				additionalReferenceTypes.add(referenceBindingFromIType);
+				if (additionalReferenceTypes.size() > MAX_RESULTS) {
+					return additionalReferenceTypes;
+				}
 			}
 		}
 		return additionalReferenceTypes;

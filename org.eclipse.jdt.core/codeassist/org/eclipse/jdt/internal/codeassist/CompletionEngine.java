@@ -3888,8 +3888,10 @@ public final class CompletionEngine
 		}
 
 		try {
-			for (ReferenceBinding referenceBinding : SuperOrSubtypesCompletionHelper.findAdditionalExpectedTypes(this.typeRoot,
-					this.lookupEnvironment, this.nameEnvironment.nameLookup, this.expectedTypes, this.expectedTypesFilter == SUPERTYPE, this.expectedTypesFilter == SUBTYPE, this.monitor)) {
+			ArrayList<ReferenceBinding> addition = SuperOrSubtypesCompletionHelper.findAdditionalExpectedTypes(this.javaProject, this.typeRoot, 
+					this.lookupEnvironment, this.nameEnvironment.nameLookup, this.expectedTypes, 
+					this.expectedTypesFilter == SUPERTYPE, this.expectedTypesFilter == SUBTYPE, this.monitor);
+			for (ReferenceBinding referenceBinding : addition) {
 				addExpectedType(referenceBinding, scope);
 			}
 		} catch (JavaModelException e) {

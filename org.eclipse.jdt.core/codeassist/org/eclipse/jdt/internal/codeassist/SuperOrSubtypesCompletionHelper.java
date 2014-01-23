@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2013 Timo Kinnunen and others.
+ * Copyright (c) 2013, 2014 Timo Kinnunen and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,6 +20,7 @@ import java.util.List;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jdt.core.IClassFile;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.ITypeHierarchy;
@@ -38,23 +39,23 @@ import org.eclipse.jdt.internal.core.Openable;
 class SuperOrSubtypesCompletionHelper {
 	private static final int MAX_RESULTS = 100;
 
-	static List<ReferenceBinding> findAdditionalExpectedTypes(ITypeRoot typeRoot, LookupEnvironment lookupEnvironment,
-			NameLookup nameLookup, TypeBinding[] expectedTypes, boolean supertypeOnly, boolean subtypeOnly,
-			IProgressMonitor monitor) throws JavaModelException {
+	static ArrayList<ReferenceBinding> findAdditionalExpectedTypes(IJavaProject javaProject, ITypeRoot typeRoot,
+			LookupEnvironment lookupEnvironment, NameLookup nameLookup, TypeBinding[] expectedTypes,
+			boolean supertypeOnly, boolean subtypeOnly, IProgressMonitor monitor) throws JavaModelException {
 		List<ReferenceBinding> referenceTypes = new ArrayList<>();
 		for (TypeBinding typeBinding : expectedTypes) {
 			if (typeBinding instanceof ReferenceBinding) {
 				referenceTypes.add((ReferenceBinding) typeBinding);
 			}
 		}
-		List<ReferenceBinding> additionalReferenceTypes = new ArrayList<>();
+		ArrayList<ReferenceBinding> additionalReferenceTypes = new ArrayList<>();
 		for (ReferenceBinding referenceBinding : referenceTypes) {
 			if (referenceBinding.compoundName == null
 					|| CharOperation.toString(referenceBinding.compoundName).equals("java.lang.Object")) { //$NON-NLS-1$
 				continue;
 			}
-			IType[] types = getExpectedSuperOrSubtypes(referenceBinding, supertypeOnly, subtypeOnly, monitor,
-					nameLookup, typeRoot);
+			IType[] types = getExpectedSuperOrSubtypes(javaProject, typeRoot, referenceBinding, nameLookup,
+					supertypeOnly, subtypeOnly, monitor);
 			for (IType iType : types) {
 				ReferenceBinding referenceBindingFromIType = getReferenceBindingFromIType(iType, lookupEnvironment);
 				additionalReferenceTypes.add(referenceBindingFromIType);
@@ -66,26 +67,20 @@ class SuperOrSubtypesCompletionHelper {
 		return additionalReferenceTypes;
 	}
 
-	private static IType[] getExpectedSuperOrSubtypes(ReferenceBinding refBinding, boolean supertypeOnly,
-			boolean subtypeOnly, IProgressMonitor monitor, NameLookup nameLookup, ITypeRoot typeRoot)
-			throws JavaModelException {
+	private static IType[] getExpectedSuperOrSubtypes(IJavaProject project, ITypeRoot typeRoot,
+			ReferenceBinding refBinding, NameLookup nameLookup, boolean supertypeOnly, boolean subtypeOnly,
+			IProgressMonitor monitor) throws JavaModelException {
 		IType type = getITypeFromReferenceBinding(refBinding, nameLookup, typeRoot);
-		if(type == null) {
+		if (type == null || supertypeOnly == subtypeOnly) {
 			return new IType[0];
 		}
 
-		IType[] types;
 		if (supertypeOnly) {
 			ITypeHierarchy typeHierarchy = type.newSupertypeHierarchy(monitor);
-			types = typeHierarchy.getAllSupertypes(type);
-		} else if (subtypeOnly) {
-			ITypeHierarchy typeHierarchy = type.newTypeHierarchy(monitor);
-			types = typeHierarchy.getAllSubtypes(type);
-		} else {
-			IType[] types2 = { type };
-			types = types2;
+			return typeHierarchy.getAllSupertypes(type);
 		}
-		return types;
+		ITypeHierarchy typeHierarchy = type.newTypeHierarchy(project, monitor);
+		return typeHierarchy.getAllSubtypes(type);
 	}
 
 	private static ReferenceBinding getReferenceBindingFromIType(IType iType, LookupEnvironment lookupEnvironment) {
@@ -96,7 +91,7 @@ class SuperOrSubtypesCompletionHelper {
 			char[] value = string.toCharArray();
 			result.add(value);
 		}
-		char[][] compoundName = result.toArray(new char[][] {});
+		char[][] compoundName = result.toArray(new char[result.size()][]);
 
 		ReferenceBinding iTypeRefBinding = lookupEnvironment.getType(compoundName);
 		return iTypeRefBinding;

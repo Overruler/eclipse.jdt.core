@@ -5,5 +5,5 @@ Bundle-Localization: bundle
 Bundle-SymbolicName: org.eclipse.jdt.annotation
 Bundle-Version: 1.1.0.qualifier
 Export-Package: org.eclipse.jdt.annotation
-Bundle-RequiredExecutionEnvironment: J2SE-1.5
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-Vendor: %providerName

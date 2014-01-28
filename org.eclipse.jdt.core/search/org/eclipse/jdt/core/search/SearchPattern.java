@@ -866,7 +866,7 @@ public static final int[] getMatchingRegions(String pattern, String name, int ma
  * @param pattern the given pattern
  * @param name the given name
  * @return true if the pattern matches the given name, false otherwise
- * @since 3.10
+ * @since 3.9
  */
 public static boolean isSimpleTypeNameMatch(String pattern, String name) {
 	if (pattern == null) {

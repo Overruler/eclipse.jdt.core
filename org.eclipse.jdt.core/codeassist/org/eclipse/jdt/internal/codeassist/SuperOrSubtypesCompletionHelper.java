@@ -17,14 +17,20 @@ package org.eclipse.jdt.internal.codeassist;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.Plugin;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.ITypeHierarchy;
 import org.eclipse.jdt.core.ITypeRoot;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.lookup.LookupEnvironment;
@@ -37,7 +43,10 @@ import org.eclipse.jdt.internal.core.NameLookup;
 import org.eclipse.jdt.internal.core.Openable;
 
 class SuperOrSubtypesCompletionHelper {
+	private static final long SUBTYPE_TIMEOUT = 60 * 1000;
 	private static final int MAX_RESULTS = 100;
+
+	private static ConcurrentHashMap<String, Long> skippedSlowSubTypes = new ConcurrentHashMap<String, Long>(16, 0.75f, 1);
 
 	static ArrayList<ReferenceBinding> findAdditionalExpectedTypes(IJavaProject javaProject, ITypeRoot typeRoot,
 			LookupEnvironment lookupEnvironment, NameLookup nameLookup, TypeBinding[] expectedTypes,
@@ -50,17 +59,33 @@ class SuperOrSubtypesCompletionHelper {
 		}
 		ArrayList<ReferenceBinding> additionalReferenceTypes = new ArrayList<ReferenceBinding>();
 		for (ReferenceBinding referenceBinding : referenceTypes) {
-			if (referenceBinding.compoundName == null
-					|| CharOperation.toString(referenceBinding.compoundName).equals("java.lang.Object")) { //$NON-NLS-1$
+			if (referenceBinding.compoundName == null) {
+				continue;
+			}
+			String name = CharOperation.toString(referenceBinding.compoundName);
+			if (name.equals("java.lang.Object")) { //$NON-NLS-1$
 				continue;
 			}
 			IType[] types = getExpectedSuperOrSubtypes(javaProject, typeRoot, referenceBinding, nameLookup,
 					supertypeOnly, subtypeOnly, monitor);
 			for (IType iType : types) {
 				ReferenceBinding referenceBindingFromIType = getReferenceBindingFromIType(iType, lookupEnvironment);
-				additionalReferenceTypes.add(referenceBindingFromIType);
-				if (additionalReferenceTypes.size() > MAX_RESULTS) {
-					return additionalReferenceTypes;
+				Long retryTime = skippedSlowSubTypes.get(name);
+				if (retryTime == null || System.currentTimeMillis() > retryTime) {
+					if (retryTime != null) {
+						skippedSlowSubTypes.remove(name);
+					}
+					try {
+						additionalReferenceTypes.add(referenceBindingFromIType);
+						if (additionalReferenceTypes.size() > MAX_RESULTS) {
+							return additionalReferenceTypes;
+						}
+					} catch (OperationCanceledException e) {
+						monitor.setCanceled(false);
+						skippedSlowSubTypes.put(name, System.currentTimeMillis() + SUBTYPE_TIMEOUT);
+						warn("Type hierarchy too slow, giving 1 min penalty to " + name, e); //$NON-NLS-1$
+						return additionalReferenceTypes;
+					}
 				}
 			}
 		}
@@ -165,5 +190,11 @@ class SuperOrSubtypesCompletionHelper {
 		IClassFile classFile = binaryType.getPackageFragment().getClassFile(
 				classFileName + SuffixConstants.SUFFIX_STRING_class);
 		return classFile.getType();
+	}
+
+	private static void warn(String message, Exception e) {
+		Plugin plugin = JavaCore.getPlugin();
+		String symbolicName = plugin.getBundle().getSymbolicName();
+		plugin.getLog().log(new Status(IStatus.WARNING, symbolicName, message, e));
 	}
 }

@@ -910,6 +910,7 @@ private static boolean isCamelCaseNameMatch(char[] pattern, char[] name, boolean
 	return pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name);
 }
 private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
+	// TODO match non-continuous sequences 
 	String inputPattern = anyNonJavaIdentifier.matcher(new String(patternChars)).replaceAll(ANY_CHARACTER_REGEX);
 	String pattern = CASE_INSENSITIVE_REGEX + ANY_JAVA_IDENTIFIER_REGEX + inputPattern + ANY_JAVA_IDENTIFIER_REGEX
 			+ ANY_CHARACTERS_REGEX;

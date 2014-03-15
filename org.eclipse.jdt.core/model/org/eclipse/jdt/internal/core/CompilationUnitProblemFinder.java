@@ -20,6 +20,7 @@ import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.internal.compiler.*;
 import org.eclipse.jdt.internal.compiler.Compiler;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.env.AccessRestriction;
 import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.ISourceType;
@@ -105,8 +106,10 @@ public class CompilationUnitProblemFinder extends Compiler {
 		
 		try {
 			IJavaProject project = ((SourceTypeElementInfo) sourceTypes[0]).getHandle().getJavaProject();
-			this.options.complianceLevel = CompilerOptions.versionToJdkLevel(project.getOption(JavaCore.COMPILER_COMPLIANCE, true));
-			this.options.sourceLevel = CompilerOptions.versionToJdkLevel(project.getOption(JavaCore.COMPILER_SOURCE, true));
+			this.options.complianceLevel = JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE))
+				? ClassFileConstants.JDK1_8 : CompilerOptions.versionToJdkLevel(project.getOption(JavaCore.COMPILER_COMPLIANCE, true));
+			this.options.sourceLevel = JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE))
+				? ClassFileConstants.JDK1_8 : CompilerOptions.versionToJdkLevel(project.getOption(JavaCore.COMPILER_SOURCE, true));
 
 			// need to hold onto this
 			CompilationUnitDeclaration unit =

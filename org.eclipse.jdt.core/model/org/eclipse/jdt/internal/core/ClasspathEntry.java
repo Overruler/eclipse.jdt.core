@@ -2045,7 +2045,8 @@ public class ClasspathEntry implements IClasspathEntry {
 						if (!prereqProjectRsc.isOpen()){
 							return new JavaModelStatus(IJavaModelStatusConstants.INVALID_CLASSPATH, Messages.bind(Messages.classpath_closedProject, new String[] {path.segment(0)}));
 						}
-						if (!JavaCore.IGNORE.equals(project.getOption(JavaCore.CORE_INCOMPATIBLE_JDK_LEVEL, true))) {
+						if (!JavaCore.IGNORE.equals(project.getOption(JavaCore.CORE_INCOMPATIBLE_JDK_LEVEL, true))
+								&& !JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE))) {
 							long projectTargetJDK = CompilerOptions.versionToJdkLevel(project.getOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, true));
 							long prereqProjectTargetJDK = CompilerOptions.versionToJdkLevel(prereqProject.getOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, true));
 							if (prereqProjectTargetJDK > projectTargetJDK) {
@@ -2109,7 +2110,8 @@ public class ClasspathEntry implements IClasspathEntry {
 	// more fully.
 	private static IJavaModelStatus validateLibraryEntry(IPath path, IJavaProject project, String container, IPath sourceAttachment, String entryPathMsg, boolean isOptionalLibrary) {
 		if (path.isAbsolute() && !path.isEmpty()) {
-			boolean validateJdkLevelCompatibility = !JavaCore.IGNORE.equals(project.getOption(JavaCore.CORE_INCOMPATIBLE_JDK_LEVEL, true));
+			boolean validateJdkLevelCompatibility = !JavaCore.IGNORE.equals(project.getOption(JavaCore.CORE_INCOMPATIBLE_JDK_LEVEL, true))
+					&& !JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE));
 			// https://bugs.eclipse.org/bugs/show_bug.cgi?id=412882, avoid validating optional entries
 			if (!validateJdkLevelCompatibility && isOptionalLibrary) {
 				return JavaModelStatus.VERIFIED_OK;

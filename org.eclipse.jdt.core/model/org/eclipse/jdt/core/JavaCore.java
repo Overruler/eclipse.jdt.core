@@ -2205,6 +2205,19 @@ public final class JavaCore extends Plugin {
 	 */
 	public static final String CORE_JAVA_BUILD_INVALID_CLASSPATH = PLUGIN_ID + ".builder.invalidClasspath"; //$NON-NLS-1$
 	/**
+	 * Core option ID: Experimental Option Forcing Latest JDK Regardless of Settings.
+	 * <p>Warning, do not enable. When enabled, changes to compliance settings or project specific settings have no effect
+	 *    and existing settings can change silently. This is an experimental feature that may be removed at any time.</p>
+	 * <dl>
+	 * <dt>Option id:</dt><dd><code>"org.eclipse.jdt.core.experimental.forceLatestJDKCompliance"</code></dd>
+	 * <dt>Possible values:</dt><dd><code>{ "enabled", "disabled" }</code></dd>
+	 * <dt>Default:</dt><dd><code>"disabled"</code></dd>
+	 * </dl>
+	 * @since 3.9
+	 * @category CoreOptionID
+	 */
+	public static final String CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE = PLUGIN_ID + ".experimental.forceLatestJDKCompliance"; //$NON-NLS-1$
+	/**
 	 * Core option ID: Default Source Encoding Format.
 	 * <p>Get the default encoding format of source files. This value is
 	 *    immutable and preset to the result of <code>ResourcesPlugin.getEncoding()</code>.</p>

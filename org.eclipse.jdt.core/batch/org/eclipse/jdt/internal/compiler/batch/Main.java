@@ -63,6 +63,7 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.core.compiler.CompilationProgress;
@@ -2909,7 +2910,8 @@ private void initializeWarnings(String propertiesFile) {
 		this.options.put(CompilerOptions.OPTION_DocCommentSupport, CompilerOptions.ENABLED);
 	}
 	if (!properties.containsKey(CompilerOptions.OPTION_ReportForbiddenReference)) {
-		this.options.put(CompilerOptions.OPTION_ReportForbiddenReference, CompilerOptions.ERROR);
+		this.options.put(CompilerOptions.OPTION_ReportForbiddenReference, JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE))
+			? CompilerOptions.IGNORE : CompilerOptions.ERROR);
 	}
 }
 protected void enableAll(int severity) {
@@ -3461,7 +3463,9 @@ private void handleErrorOrWarningToken(String token, boolean isEnabling, int sev
 				setSeverity(CompilerOptions.OPTION_ReportFinallyBlockNotCompletingNormally, severity, isEnabling);
 				return;
 			} else if (token.equals("forbidden")) { //$NON-NLS-1$
-				setSeverity(CompilerOptions.OPTION_ReportForbiddenReference, severity, isEnabling);
+				setSeverity(CompilerOptions.OPTION_ReportForbiddenReference,
+					JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE)) ? ProblemSeverities.Ignore : severity, 
+					JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CORE_EXPERIMENTAL_FORCE_LATEST_JDK_COMPLIANCE)) ? true : isEnabling);
 				return;
 			} else if (token.equals("fallthrough")) { //$NON-NLS-1$
 				setSeverity(CompilerOptions.OPTION_ReportFallthroughCase, severity, isEnabling);

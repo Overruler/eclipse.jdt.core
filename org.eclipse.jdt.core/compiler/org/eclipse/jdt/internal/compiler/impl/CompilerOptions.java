@@ -145,6 +145,7 @@ public class CompilerOptions {
 	public static final String OPTION_Process_Annotations = "org.eclipse.jdt.core.compiler.processAnnotations"; //$NON-NLS-1$
 	// OPTION_Store_Annotations: undocumented option for testing purposes
 	public static final String OPTION_Store_Annotations = "org.eclipse.jdt.core.compiler.storeAnnotations"; //$NON-NLS-1$
+	public static final String OPTION_Experimental_OverrideComplianceWithLatest = "org.eclipse.jdt.core.compiler.overrideComplianceWithLatest"; //$NON-NLS-1$
 	public static final String OPTION_EmulateJavacBug8031744 = "org.eclipse.jdt.core.compiler.emulateJavacBug8031744"; //$NON-NLS-1$
 	public static final String OPTION_PostResolutionRawTypeCompatibilityCheck = "org.eclipse.jdt.core.compiler.postResolutionRawTypeCompatibilityCheck"; //$NON-NLS-1$
 	public static final String OPTION_ReportRedundantSuperinterface =  "org.eclipse.jdt.core.compiler.problem.redundantSuperinterface"; //$NON-NLS-1$
@@ -458,6 +459,8 @@ public class CompilerOptions {
 
 	public boolean complainOnUninternedIdentityComparison;
 	public boolean emulateJavacBug8031744 = true;
+
+	public boolean overrideComplianceWithLatest;
 
 	// keep in sync with warningTokenToIrritant and warningTokenFromIrritant
 	public final static String[] warningTokens = {
@@ -1035,6 +1038,7 @@ public class CompilerOptions {
 	
 	public Map getMap() {
 		Map optionsMap = new HashMap(30);
+		optionsMap.put(OPTION_Experimental_OverrideComplianceWithLatest, this.overrideComplianceWithLatest ? ENABLED : DISABLED);
 		optionsMap.put(OPTION_LocalVariableAttribute, (this.produceDebugAttributes & ClassFileConstants.ATTR_VARS) != 0 ? GENERATE : DO_NOT_GENERATE);
 		optionsMap.put(OPTION_LineNumberAttribute, (this.produceDebugAttributes & ClassFileConstants.ATTR_LINES) != 0 ? GENERATE : DO_NOT_GENERATE);
 		optionsMap.put(OPTION_SourceFileAttribute, (this.produceDebugAttributes & ClassFileConstants.ATTR_SOURCE) != 0 ? GENERATE : DO_NOT_GENERATE);
@@ -1097,7 +1101,7 @@ public class CompilerOptions {
 		optionsMap.put(OPTION_ReportRawTypeReference, getSeverityString(RawTypeReference));
 		optionsMap.put(OPTION_ReportFinalParameterBound, getSeverityString(FinalParameterBound));
 		optionsMap.put(OPTION_ReportMissingSerialVersion, getSeverityString(MissingSerialVersion));
-		optionsMap.put(OPTION_ReportForbiddenReference, getSeverityString(ForbiddenReference));
+		optionsMap.put(OPTION_ReportForbiddenReference, this.overrideComplianceWithLatest ? IGNORE : getSeverityString(ForbiddenReference));
 		optionsMap.put(OPTION_ReportDiscouragedReference, getSeverityString(DiscouragedReference));
 		optionsMap.put(OPTION_ReportVarargsArgumentNeedCast, getSeverityString(VarargsArgumentNeedCast));
 		optionsMap.put(OPTION_ReportMissingOverrideAnnotation, getSeverityString(MissingOverrideAnnotation));
@@ -1215,9 +1219,9 @@ public class CompilerOptions {
 		
 		// by default only lines and source attributes are generated.
 		this.produceDebugAttributes = ClassFileConstants.ATTR_SOURCE | ClassFileConstants.ATTR_LINES;
-		this.complianceLevel = this.originalComplianceLevel = ClassFileConstants.JDK1_4; // by default be compliant with 1.4
-		this.sourceLevel = this.originalSourceLevel = ClassFileConstants.JDK1_3; //1.3 source behavior by default
-		this.targetJDK = ClassFileConstants.JDK1_2; // default generates for JVM1.2
+		this.complianceLevel = this.originalComplianceLevel = this.overrideComplianceWithLatest ? ClassFileConstants.JDK1_8 : ClassFileConstants.JDK1_4; // by default be compliant with 1.4
+		this.sourceLevel = this.originalSourceLevel = this.overrideComplianceWithLatest ? ClassFileConstants.JDK1_8 : ClassFileConstants.JDK1_3; //1.3 source behavior by default
+		this.targetJDK = this.overrideComplianceWithLatest ? ClassFileConstants.JDK1_8 : ClassFileConstants.JDK1_2; // default generates for JVM1.2
 
 		this.defaultEncoding = null; // will use the platform default encoding
 
@@ -1339,6 +1343,13 @@ public class CompilerOptions {
 
 	public void set(Map optionsMap) {
 		Object optionValue;
+		if ((optionValue = optionsMap.get(OPTION_Experimental_OverrideComplianceWithLatest)) != null) {
+			if (ENABLED.equals(optionValue)) {
+				this.overrideComplianceWithLatest = true;
+			} else if (DISABLED.equals(optionValue)) {
+				this.overrideComplianceWithLatest = false;
+			}
+		}
 		if ((optionValue = optionsMap.get(OPTION_LocalVariableAttribute)) != null) {
 			if (GENERATE.equals(optionValue)) {
 				this.produceDebugAttributes |= ClassFileConstants.ATTR_VARS;
@@ -1404,16 +1415,16 @@ public class CompilerOptions {
 		}
 		if ((optionValue = optionsMap.get(OPTION_Compliance)) != null) {
 			long level = versionToJdkLevel(optionValue);
-			if (level != 0) this.complianceLevel = this.originalComplianceLevel = level;
+			if (level != 0) this.complianceLevel = this.originalComplianceLevel = this.overrideComplianceWithLatest ? ClassFileConstants.JDK1_8 : level;
 		}
 		if ((optionValue = optionsMap.get(OPTION_Source)) != null) {
 			long level = versionToJdkLevel(optionValue);
-			if (level != 0) this.sourceLevel = this.originalSourceLevel = level;
+			if (level != 0) this.sourceLevel = this.originalSourceLevel = this.overrideComplianceWithLatest ? ClassFileConstants.JDK1_8 : level;
 		}
 		if ((optionValue = optionsMap.get(OPTION_TargetPlatform)) != null) {
 			long level = versionToJdkLevel(optionValue);
 			if (level != 0) {
-				this.targetJDK = level;
+				this.targetJDK = this.overrideComplianceWithLatest ? ClassFileConstants.JDK1_8 : level;
 			}
 			if (this.targetJDK >= ClassFileConstants.JDK1_5) this.inlineJsrBytecode = true; // forced from 1.5 mode on
 		}
@@ -1601,7 +1612,7 @@ public class CompilerOptions {
 		if ((optionValue = optionsMap.get(OPTION_ReportRawTypeReference)) != null) updateSeverity(RawTypeReference, optionValue);
 		if ((optionValue = optionsMap.get(OPTION_ReportFinalParameterBound)) != null) updateSeverity(FinalParameterBound, optionValue);
 		if ((optionValue = optionsMap.get(OPTION_ReportMissingSerialVersion)) != null) updateSeverity(MissingSerialVersion, optionValue);
-		if ((optionValue = optionsMap.get(OPTION_ReportForbiddenReference)) != null) updateSeverity(ForbiddenReference, optionValue);
+		if ((optionValue = optionsMap.get(OPTION_ReportForbiddenReference)) != null) updateSeverity(ForbiddenReference, this.overrideComplianceWithLatest ? IGNORE : optionValue);
 		if ((optionValue = optionsMap.get(OPTION_ReportDiscouragedReference)) != null) updateSeverity(DiscouragedReference, optionValue);
 		if ((optionValue = optionsMap.get(OPTION_ReportVarargsArgumentNeedCast)) != null) updateSeverity(VarargsArgumentNeedCast, optionValue);
 		if ((optionValue = optionsMap.get(OPTION_ReportNullReference)) != null) updateSeverity(NullReference, optionValue);

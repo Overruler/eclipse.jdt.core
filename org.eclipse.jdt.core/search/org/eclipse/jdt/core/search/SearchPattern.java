@@ -12,7 +12,8 @@
 package org.eclipse.jdt.core.search;
 
 import java.io.IOException;
-import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.Locale;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -227,12 +228,9 @@ public abstract class SearchPattern {
 	 */
 	public boolean mustResolve = true;
 	
-	private static final String CASE_INSENSITIVE_REGEX = "(?i)"; //$NON-NLS-1$
-	private static final String ANY_JAVA_IDENTIFIER_REGEX = "[\\p{javaJavaIdentifierPart}\\.]*"; //$NON-NLS-1$
-	private static final String ALL_BUT_JAVA_IDENTIFIER_REGEX = "[^\\p{javaJavaIdentifierPart}]"; //$NON-NLS-1$
-	private static final String ANY_CHARACTERS_REGEX = ".*"; //$NON-NLS-1$
-	private static final String ANY_CHARACTER_REGEX = "."; //$NON-NLS-1$
-	private static final Pattern anyNonJavaIdentifier = Pattern.compile(ALL_BUT_JAVA_IDENTIFIER_REGEX);
+	private static final String NO_CHARS = ""; //$NON-NLS-1$
+	private static final String MANY_WHITESPACES_REGEX = "\\s+"; //$NON-NLS-1$
+	private static final String SPACE_CHAR = " "; //$NON-NLS-1$
 
 /**
  * Creates a search pattern with the rule to apply for matching index keys.
@@ -890,7 +888,7 @@ public static boolean isSimpleTypeNameMatch(String pattern, String name) {
  * @param name the given name
  * @return true if the pattern matches the given name, false otherwise
  * 
- * @since 3.9
+ * @since 3.10
  */
 public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
 	if (pattern == null) {
@@ -910,12 +908,44 @@ private static boolean isCamelCaseNameMatch(char[] pattern, char[] name, boolean
 	return pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name);
 }
 private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
-	String inputPattern = anyNonJavaIdentifier.matcher(new String(patternChars)).replaceAll(ANY_CHARACTER_REGEX);
-	String pattern = CASE_INSENSITIVE_REGEX + ANY_JAVA_IDENTIFIER_REGEX + inputPattern + ANY_JAVA_IDENTIFIER_REGEX
-			+ ANY_CHARACTERS_REGEX;
-	String name = new String(nameChars);
-	return name.matches(pattern);
+	return isSubWordMatch(new String(patternChars), new String(nameChars))[0] != NO_CHARS;
 }
+private static String[] isSubWordMatch(String pattern, String candidate) {
+    candidate = candidate.toLowerCase(Locale.ROOT);
+    char[] src = candidate.toCharArray();
+    char[] chars = new char[candidate.length()];
+    Arrays.fill(chars, ' ');
+
+    int index = 0;
+    for(int i = 0, n = pattern.length(); i < n; i =
+      pattern.offsetByCodePoints(i, 1)) {
+      int code = pattern.codePointAt(i);
+      if(Character.isJavaIdentifierPart(code)) {
+        if(Character.isUpperCase(code)) {
+          code = Character.toLowerCase(code);
+          index = candidate.indexOf(code, index);
+        } else {
+          int oldIndex = index;
+          index = candidate.indexOf(code, index);
+          if(index == -1) {
+            index = candidate.substring(0, oldIndex).indexOf(code);
+          }
+        }
+        if(index == -1) {
+          return new String[] {
+            NO_CHARS, new String(chars), candidate
+          };
+        }
+        int end = index + Character.charCount(code);
+        System.arraycopy(src, index, chars, index, end - index);
+        Arrays.fill(src, index, end, ' ');
+        index = end;
+      }
+    }
+    return new String[] {
+      new String(chars).replaceAll(MANY_WHITESPACES_REGEX, SPACE_CHAR), new String(chars), candidate
+    };
+  }
 /**
  * Returns a search pattern that combines the given two patterns into an
  * "and" pattern. The search result will match both the left pattern and

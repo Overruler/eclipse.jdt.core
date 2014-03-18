@@ -229,6 +229,8 @@ public abstract class SearchPattern {
 	public boolean mustResolve = true;
 	
 	private static final String NO_CHARS = ""; //$NON-NLS-1$
+	private static final String NON_JAVA_IDENTIFIER_REGEX =
+	 "\\P{javaJavaIdentifierPart}"; //$NON-NLS-1$
 	private static final String MANY_WHITESPACES_REGEX = "\\s+"; //$NON-NLS-1$
 	private static final String SPACE_CHAR = " "; //$NON-NLS-1$
 
@@ -911,41 +913,41 @@ private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
 	return isSubWordMatch(new String(patternChars), new String(nameChars))[0] != NO_CHARS;
 }
 private static String[] isSubWordMatch(String pattern, String candidate) {
-    candidate = candidate.toLowerCase(Locale.ROOT);
-    char[] src = candidate.toCharArray();
-    char[] chars = new char[candidate.length()];
-    Arrays.fill(chars, ' ');
-
-    int index = 0;
-    for(int i = 0, n = pattern.length(); i < n; i =
-      pattern.offsetByCodePoints(i, 1)) {
-      int code = pattern.codePointAt(i);
-      if(Character.isJavaIdentifierPart(code)) {
-        if(Character.isUpperCase(code)) {
-          code = Character.toLowerCase(code);
-          index = candidate.indexOf(code, index);
-        } else {
-          int oldIndex = index;
-          index = candidate.indexOf(code, index);
-          if(index == -1) {
-            index = candidate.substring(0, oldIndex).indexOf(code);
-          }
-        }
-        if(index == -1) {
-          return new String[] {
-            NO_CHARS, new String(chars), candidate
-          };
-        }
-        int end = index + Character.charCount(code);
-        System.arraycopy(src, index, chars, index, end - index);
-        Arrays.fill(src, index, end, ' ');
-        index = end;
-      }
-    }
-    return new String[] {
-      new String(chars).replaceAll(MANY_WHITESPACES_REGEX, SPACE_CHAR), new String(chars), candidate
-    };
-  }
+	candidate = candidate.toLowerCase(Locale.ROOT);
+	char[] src = candidate.toCharArray();
+	char[] chars = new char[candidate.length()];
+	Arrays.fill(chars, ' ');
+	String[] parts = (candidate + '\0').split(NON_JAVA_IDENTIFIER_REGEX, -1);
+	int partIndex = 0;
+	int index = 0;
+	for (int i = 0, n = pattern.length(); i < n; i = pattern.offsetByCodePoints(i, 1)) {
+		int code = pattern.codePointAt(i);
+		if (Character.isJavaIdentifierPart(code)) {
+			if (Character.isUpperCase(code)) {
+				code = Character.toLowerCase(code);
+				index = parts[partIndex].indexOf(code, index);
+			} else {
+				int oldIndex = index;
+				index = parts[partIndex].indexOf(code, index);
+				if (index == -1) {
+					index = parts[partIndex].substring(0, oldIndex).indexOf(code);
+				}
+			}
+			if (index == -1) {
+				return new String[] { NO_CHARS, new String(chars), candidate };
+			}
+			int end = index + Character.charCount(code);
+			System.arraycopy(src, index, chars, index, end - index);
+			Arrays.fill(src, index, end, ' ');
+			index = end;
+		} else if (partIndex + 1 < parts.length) {
+			partIndex++;
+			index = 0;
+		}
+	}
+	return new String[] { new String(chars).replaceAll(MANY_WHITESPACES_REGEX, SPACE_CHAR), new String(chars),
+			candidate };
+}
 /**
  * Returns a search pattern that combines the given two patterns into an
  * "and" pattern. The search result will match both the left pattern and

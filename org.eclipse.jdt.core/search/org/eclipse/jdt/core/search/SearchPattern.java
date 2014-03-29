@@ -14,6 +14,7 @@ package org.eclipse.jdt.core.search;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -233,6 +234,9 @@ public abstract class SearchPattern {
 	 "\\P{javaJavaIdentifierPart}"; //$NON-NLS-1$
 	private static final String MANY_WHITESPACES_REGEX = "\\s+"; //$NON-NLS-1$
 	private static final String SPACE_CHAR = " "; //$NON-NLS-1$
+	private static final Pattern NON_JAVA_PATTERN =
+		Pattern.compile(NON_JAVA_IDENTIFIER_REGEX);
+	private static final boolean DEBUG_SUBWORDS = false;
 
 /**
  * Creates a search pattern with the rule to apply for matching index keys.
@@ -910,43 +914,74 @@ private static boolean isCamelCaseNameMatch(char[] pattern, char[] name, boolean
 	return pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name);
 }
 private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
-	return isSubWordMatch(new String(patternChars), new String(nameChars))[0] != NO_CHARS;
+	String pattern = new String(patternChars);
+	String[] subWordMatch = isSubWordMatch(pattern, new String(nameChars));
+	if (DEBUG_SUBWORDS) {
+		System.out.println(pattern + ' ' + subWordMatch[0] + '\n' + subWordMatch[2] + '\n' + subWordMatch[1]);
+	}
+	return subWordMatch[0] != NO_CHARS;
 }
 private static String[] isSubWordMatch(String pattern, String candidate) {
 	candidate = candidate.toLowerCase(Locale.ROOT);
-	char[] src = candidate.toCharArray();
-	char[] chars = new char[candidate.length()];
+	String[] candidateParts = NON_JAVA_PATTERN.split(candidate, -1);
+	String[] patternParts = NON_JAVA_PATTERN.split(pattern, -1);
+
+	String[] result = new String[] { NO_CHARS, NO_CHARS, candidate };
+	int index = 0;
+	for (String part : patternParts) {
+		int subIndex = -1;
+		for (int i = 0, n = candidateParts.length - index; i < n; i++) {
+			String[] wordMatch = isWordMatch(part, candidateParts[i + index]);
+			if (index != 0 || i != 0) {
+				result[1] += ' ';
+			}
+			result[1] += wordMatch[1];
+			if (wordMatch[0] != NO_CHARS) {
+				result[0] += wordMatch[0];
+				subIndex = i + index;
+				break;
+			}
+		}
+		index = subIndex;
+		if (index == -1) {
+			break;
+		}
+	}
+	if (index == -1) {
+		result[0] = NO_CHARS;
+	}
+	return result;
+}
+private static String[] isWordMatch(String pattern, String candidate) {
+	StringBuffer remaining = new StringBuffer(candidate.replaceAll(NON_JAVA_IDENTIFIER_REGEX, SPACE_CHAR));
+	char[] chars = new char[remaining.length()];
 	Arrays.fill(chars, ' ');
-	String[] parts = (candidate + '\0').split(NON_JAVA_IDENTIFIER_REGEX, -1);
-	int partIndex = 0;
+	if (pattern.length() > chars.length) {
+		return new String[] { NO_CHARS, new String(chars), candidate };
+	}
 	int index = 0;
 	for (int i = 0, n = pattern.length(); i < n; i = pattern.offsetByCodePoints(i, 1)) {
-		int code = pattern.codePointAt(i);
-		if (Character.isJavaIdentifierPart(code)) {
-			if (Character.isUpperCase(code)) {
-				code = Character.toLowerCase(code);
-				index = parts[partIndex].indexOf(code, index);
+		int codepoint = pattern.codePointAt(i);
+		if (Character.isJavaIdentifierPart(codepoint)) {
+			if (Character.isUpperCase(codepoint)) {
+				codepoint = Character.toLowerCase(codepoint);
 			} else {
-				int oldIndex = index;
-				index = parts[partIndex].indexOf(code, index);
-				if (index == -1) {
-					index = parts[partIndex].substring(0, oldIndex).indexOf(code);
-				}
+				index = 0;
 			}
+			char[] chars2 = Character.toChars(codepoint);
+			index = remaining.indexOf(new String(chars2), index);
 			if (index == -1) {
 				return new String[] { NO_CHARS, new String(chars), candidate };
 			}
-			int end = index + Character.charCount(code);
-			System.arraycopy(src, index, chars, index, end - index);
-			Arrays.fill(src, index, end, ' ');
+			int end = index + chars2.length;
+			System.arraycopy(chars2, 0, chars, index, end - index);
+			Arrays.fill(chars2, ' ');
+			remaining.replace(index, end, new String(chars2));
 			index = end;
-		} else if (partIndex + 1 < parts.length) {
-			partIndex++;
-			index = 0;
 		}
 	}
-	return new String[] { new String(chars).replaceAll(MANY_WHITESPACES_REGEX, SPACE_CHAR), new String(chars),
-			candidate };
+	String matched = new String(chars);
+	return new String[] { matched.replaceAll(MANY_WHITESPACES_REGEX, SPACE_CHAR), matched, candidate };
 }
 /**
  * Returns a search pattern that combines the given two patterns into an

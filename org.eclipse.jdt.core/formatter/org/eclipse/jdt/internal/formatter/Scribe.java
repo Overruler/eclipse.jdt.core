@@ -11,6 +11,7 @@
  *     Jesper S Moller - Contribution for bug 402892
  *                       Contribution for bug 402818
  *     Robin Stocker - Bug 49619 - [formatting] comment formatter leaves whitespace in comments
+ *     Timo Kinnunen <timo.kinnunen@gmail.com> - Bug 431523 - [formatter] Some Off/On tags do not work like described or work unpredictably
  *******************************************************************************/
 package org.eclipse.jdt.internal.formatter;
 
@@ -129,7 +130,6 @@ public class Scribe implements IJavaDocTagConstants {
 	/** disabling */
 	boolean editsEnabled;
 	boolean useTags;
-	int tagsKind;
 
 	/* Comments formatting */
 	private static final int INCLUDE_BLOCK_COMMENTS = CodeFormatter.F_INCLUDE_COMMENTS | CodeFormatter.K_MULTI_LINE_COMMENT;
@@ -1515,7 +1515,6 @@ public class Scribe implements IJavaDocTagConstants {
 
 	private void initializeScanner(long sourceLevel, DefaultCodeFormatterOptions preferences) {
 		this.useTags = preferences.use_tags;
-		this.tagsKind = 0;
 		char[][] taskTags = null;
 		if (this.useTags) {
 			this.disablingTag = preferences.disabling_tag;
@@ -1528,23 +1527,6 @@ public class Scribe implements IJavaDocTagConstants {
 				taskTags = new char[][] { this.disablingTag };
 			} else {
 				taskTags = new char[][] { this.disablingTag, this.enablingTag };
-			}
-		}
-		if (taskTags != null) {
-			loop: for (int i=0,length=taskTags.length; i<length; i++) {
-				if (taskTags[i].length > 2 && taskTags[i][0] == '/') {
-					switch (taskTags[i][1]) {
-						case '/':
-							this.tagsKind = TerminalTokens.TokenNameCOMMENT_LINE;
-							break loop;
-						case '*':
-							if (taskTags[i][2] != '*') {
-								this.tagsKind = TerminalTokens.TokenNameCOMMENT_BLOCK;
-								break loop;
-							}
-							break;
-					}
-				}
 			}
 		}
 		this.scanner = new Scanner(true, true, false/*nls*/, sourceLevel/*sourceLevel*/, taskTags, null/*taskPriorities*/, true/*taskCaseSensitive*/);
@@ -2573,8 +2555,7 @@ public class Scribe implements IJavaDocTagConstants {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
 								turnOff = true;
-							} else if (this.tagsKind == this.currentToken
-								&& CharOperation.fragmentEquals(this.disablingTag, this.scanner.source, tokenStartPosition, true)) {
+							} else if (containsDisabling(tokenStartPosition)) {
     							this.editsEnabled = false;
 								turnOff = true;
 					    	}
@@ -2605,8 +2586,8 @@ public class Scribe implements IJavaDocTagConstants {
 						if (this.useTags && !this.editsEnabled) {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
-							} else if (this.tagsKind == this.currentToken) {
-	    						this.editsEnabled = CharOperation.fragmentEquals(this.enablingTag, this.scanner.source, tokenStartPosition, true);
+							} else {
+	    						this.editsEnabled = containsEnabling(tokenStartPosition);
 					    	}
 						}
 						break;
@@ -2616,8 +2597,7 @@ public class Scribe implements IJavaDocTagConstants {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
 								turnOff = true;
-							} else if (this.tagsKind == this.currentToken
-								&& CharOperation.fragmentEquals(this.disablingTag, this.scanner.source, tokenStartPosition, true)) {
+							} else if (containsDisabling(tokenStartPosition)) {
     							this.editsEnabled = false;
 								turnOff = true;
 					    	}
@@ -2655,8 +2635,8 @@ public class Scribe implements IJavaDocTagConstants {
 						if (this.useTags && !this.editsEnabled) {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
-							} else if (this.tagsKind == this.currentToken) {
-	    						this.editsEnabled = CharOperation.fragmentEquals(this.enablingTag, this.scanner.source, tokenStartPosition, true);
+							} else {
+	    						this.editsEnabled = containsEnabling(tokenStartPosition);
 					    	}
 						}
 						break;
@@ -4642,8 +4622,7 @@ public class Scribe implements IJavaDocTagConstants {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
 								turnOff = true;
-							} else if (this.tagsKind == this.currentToken
-								&& CharOperation.equals(this.disablingTag, this.scanner.source, tokenStartPosition, tokenEndPosition+1)) {
+							} else if (containsDisabling(tokenStartPosition)) {
     							this.editsEnabled = false;
 								turnOff = true;
 					    	}
@@ -4660,8 +4639,8 @@ public class Scribe implements IJavaDocTagConstants {
 						if (this.useTags && !this.editsEnabled) {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
-							} else if (this.tagsKind == this.currentToken) {
-	    						this.editsEnabled = CharOperation.equals(this.enablingTag, this.scanner.source, tokenStartPosition, tokenEndPosition+1);
+							} else {
+	    						this.editsEnabled = containsEnabling(tokenStartPosition);
 					    	}
 						}
 						currentTokenStartPosition = this.scanner.currentPosition;
@@ -4674,8 +4653,7 @@ public class Scribe implements IJavaDocTagConstants {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
 								turnOff = true;
-							} else if (this.tagsKind == this.currentToken
-								&& CharOperation.equals(this.disablingTag, this.scanner.source, tokenStartPosition, tokenEndPosition)) {
+							} else if (containsDisabling(tokenStartPosition)) {
     							this.editsEnabled = false;
 								turnOff = true;
 					    	}
@@ -4692,8 +4670,8 @@ public class Scribe implements IJavaDocTagConstants {
 						if (this.useTags && !this.editsEnabled) {
 							if (foundTaskCount > 0) {
 								setEditsEnabled(foundTaskCount);
-							} else if (this.tagsKind == this.currentToken) {
-	    						this.editsEnabled = CharOperation.equals(this.enablingTag, this.scanner.source, tokenStartPosition, tokenEndPosition);
+							} else {
+	    						this.editsEnabled = containsEnabling(tokenStartPosition);
 					    	}
 						}
 						currentTokenStartPosition = this.scanner.currentPosition;
@@ -4734,6 +4712,20 @@ public class Scribe implements IJavaDocTagConstants {
 		} catch (InvalidInputException e) {
 			throw new AbortFormatting(e);
 		}
+	}
+
+	private boolean containsEnabling(int tokenStartPosition) {
+		return this.enablingTag != null
+				&& (CharOperation.fragmentEquals(this.enablingTag, this.scanner.source, tokenStartPosition, true) ||
+				// have to peek ahead otherwise we skip over one potential starting position at this + half a token
+				CharOperation.fragmentEquals(this.enablingTag, this.scanner.source, tokenStartPosition + 1, true));
+	}
+
+	private boolean containsDisabling(int tokenStartPosition) {
+		return this.disablingTag != null
+				&& (CharOperation.fragmentEquals(this.disablingTag, this.scanner.source, tokenStartPosition, true) ||
+				// have to peek ahead otherwise we skip over one potential starting position at this + half a token
+				CharOperation.fragmentEquals(this.disablingTag, this.scanner.source, tokenStartPosition + 1, true));
 	}
 
 	public void printNewLine() {

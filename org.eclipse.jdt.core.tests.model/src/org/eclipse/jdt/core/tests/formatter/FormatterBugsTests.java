@@ -9,6 +9,7 @@
  *     IBM Corporation - initial API and implementation
  *     Ray V. (voidstar@gmail.com) - Contribution for bug 282988
  *     Robin Stocker - Bug 49619 - [formatting] comment formatter leaves whitespace in comments
+ *     Timo Kinnunen <timo.kinnunen@gmail.com> - Bug 431523 - [formatter] Some Off/On tags do not work like described or work unpredictably
  *******************************************************************************/
 package org.eclipse.jdt.core.tests.formatter;
 
@@ -10505,6 +10506,252 @@ public void testBug332818() throws Exception {
 		"}\n"
 	);
 }
+
+/**
+ * @bug 431523: [formatter] Some Off/On tags do not work like described or work unpredictably
+ * @test Ensure that both off and on tags are respected as given and regardless of surrounding context
+ * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=431523"
+ */
+public void testBug431523a() throws JavaModelException {
+	this.formatterPrefs = null;
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_USE_ON_OFF_TAGS, DefaultCodeFormatterConstants.TRUE);
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_DISABLING_TAG, "/*Q*");
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_ENABLING_TAG, "/*E*");
+	String source =
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523a {\n" + 
+  		"int a      =  -     1  +    42;\n" + 
+  		"\n" + 
+  		"/*Q*/\n" + 
+  		"int b      =  -     1  +    42;\n" + 
+  		"/*E*/\n" + 
+  		"\n" + 
+  		"char                       x;\n" + 
+  		"\n" + 
+  		"//*Q*/\n" + 
+  		"int c      =  -     1  +    42;\n" + 
+  		"//*E*/\n" + 
+  		"\n" + 
+  		"char                       y;\n" + 
+  		"///*Q*/\n" + 
+  		"int d      =  -     1  +    42;\n" + 
+  		"///*E*/\n" + 
+  		"\n" + 
+  		"char                       y2;\n" + 
+  		"}\n";
+	formatSource(source,
+  		"package formatterbugs;\n" + 
+		"\n" + 
+  		"public class Bug431523a {\n" + 
+  		"	int a = -1 + 42;\n" + 
+  		"\n" + 
+  		"/*Q*/\n" + 
+  		"int b      =  -     1  +    42;\n" + 
+  		"/*E*/\n" + 
+  		"\n" + 
+  		"	char x;\n" + 
+  		"\n" + 
+  		"//*Q*/\n" + 
+  		"int c      =  -     1  +    42;\n" + 
+  		"//*E*/\n" + 
+  		"\n" + 
+  		"	char y;\n" + 
+  		"///*Q*/\n" + 
+  		"int d      =  -     1  +    42;\n" + 
+  		"///*E*/\n" + 
+  		"\n" + 
+  		"	char y2;\n" + 
+  		"}\n"
+	);
+}
+public void testBug431523b() throws JavaModelException {
+	this.formatterPrefs = null;
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_USE_ON_OFF_TAGS, DefaultCodeFormatterConstants.TRUE);
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_DISABLING_TAG, "/*Q*/");
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_ENABLING_TAG, "//e//");
+	String source =
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523b {\n" + 
+  		"int a      =  -     1  +    42;\n" + 
+  		"\n" + 
+  		"/*Q*/\n" + 
+  		"int b      =  -     1  +    42;\n" + 
+  		"//e//\n" + 
+  		"\n" + 
+  		"char                       x;\n" + 
+  		"\n" + 
+  		"//*Q*/\n" + 
+  		"int c      =  -     1  +    42;\n" + 
+  		"///e//\n" + 
+  		"\n" + 
+  		"char                       y;\n" + 
+  		"///*Q*/\n" + 
+  		"int d      =  -     1  +    42;\n" + 
+  		"////e//\n" + 
+  		"\n" + 
+  		"char                       y2;\n" + 
+  		"}\n";
+	formatSource(source,
+		"package formatterbugs;\n" + 
+		"\n" + 
+		"public class Bug431523b {\n" + 
+		"	int a = -1 + 42;\n" + 
+		"\n" + 
+		"/*Q*/\n" + 
+		"int b      =  -     1  +    42;\n" + 
+		"//e//\n" + 
+		"\n" + 
+		"	char x;\n" + 
+		"\n" + 
+		"//*Q*/\n" + 
+		"int c      =  -     1  +    42;\n" + 
+		"///e//\n" + 
+		"\n" + 
+		"	char y;\n" + 
+		"///*Q*/\n" + 
+		"int d      =  -     1  +    42;\n" + 
+		"////e//\n" + 
+		"\n" + 
+		"	char y2;\n" + 
+		"}\n"
+	);
+}
+public void testBug431523c() throws JavaModelException {
+	this.formatterPrefs = null;
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_USE_ON_OFF_TAGS, DefaultCodeFormatterConstants.TRUE);
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_DISABLING_TAG, "/*Q*/");
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_ENABLING_TAG, "//e//");
+	String source =
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523c {\n" + 
+  		"	static void foo() {\n" + 
+  		"System   .   out   .   println   (   )   ;\n" + 
+  		"/*Q*/\n" + 
+  		"System   .   out   .   println   (   )   ;\n" + 
+  		"//e//\n" + 
+  		"System   .   out   .   println   (   )   ;\n" + 
+  		"	}\n" + 
+  		"}\n" + 
+  		"";
+	formatSource(source,
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523c {\n" + 
+  		"	static void foo() {\n" + 
+  		"		System.out.println();\n" + 
+  		"/*Q*/\n" + 
+  		"System   .   out   .   println   (   )   ;\n" + 
+  		"//e//\n" + 
+  		"		System.out.println();\n" + 
+  		"	}\n" + 
+  		"}\n" + 
+  		""
+	);
+}
+public void testBug431523d() throws JavaModelException {
+	this.formatterPrefs = null;
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_USE_ON_OFF_TAGS, DefaultCodeFormatterConstants.TRUE);
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_DISABLING_TAG, "//q/");
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_ENABLING_TAG, "//e/");
+	String source = 
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523d {\n" + 
+  		"	static void foo() {\n" + 
+  		"System   .   out   .   println   (   )   ;\n" + 
+  		"//q/\n" + 
+  		" System   .   out   .   println   (   )   ;\n" + 
+  		"//e/\n" + 
+  		"///q/\n" + 
+  		"  System   .   out   .   println   (   )   ;\n" + 
+  		"///e/\n" + 
+  		"////q/\n" + 
+  		"   System   .   out   .   println   (   )   ;\n" + 
+  		"////e/\n" + 
+  		"/////q/\n" + 
+  		"    System   .   out   .   println   (   )   ;\n" + 
+  		"/////e/\n" + 
+  		"     System   .   out   .   println   (   )   ;\n" + 
+  		"	}\n" + 
+  		"}\n" + 
+  		"";
+	formatSource(source,
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523d {\n" + 
+  		"	static void foo() {\n" + 
+  		"		System.out.println();\n" + 
+  		"//q/\n" + 
+  		" System   .   out   .   println   (   )   ;\n" + 
+  		"//e/\n" + 
+  		"///q/\n" + 
+  		"  System   .   out   .   println   (   )   ;\n" + 
+  		"///e/\n" + 
+  		"////q/\n" + 
+  		"   System   .   out   .   println   (   )   ;\n" + 
+  		"////e/\n" + 
+  		"/////q/\n" + 
+  		"    System   .   out   .   println   (   )   ;\n" + 
+  		"/////e/\n" + 
+  		"		System.out.println();\n" + 
+  		"	}\n" + 
+  		"}\n" + 
+  		""
+	);
+}
+public void testBug431523e() throws JavaModelException {
+	this.formatterPrefs = null;
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_USE_ON_OFF_TAGS, DefaultCodeFormatterConstants.TRUE);
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_DISABLING_TAG, "/*q*/");
+	this.formatterOptions.put(DefaultCodeFormatterConstants.FORMATTER_ENABLING_TAG, "/*e*/");
+	String source = 
+  		"package formatterbugs;\n" + 
+  		"\n" + 
+  		"public class Bug431523e {\n" + 
+  		"	static void foo() {\n" + 
+  		"System   .   out   .   println   (   )   ;\n" + 
+  		"/*q*/\n" + 
+  		" System   .   out   .   println   (   )   ;\n" + 
+  		"/*e*/\n" + 
+  		"//*q*/\n" + 
+  		"  System   .   out   .   println   (   )   ;\n" + 
+  		"//*e*/\n" + 
+  		"///*q*/\n" + 
+  		"   System   .   out   .   println   (   )   ;\n" + 
+  		"///*e*/\n" + 
+  		"////*q*/\n" + 
+  		"    System   .   out   .   println   (   )   ;\n" + 
+  		"////*e*/\n" + 
+  		"     System   .   out   .   println   (   )   ;\n" + 
+  		"	}\n" + 
+  		"}\n" + 
+  		"";
+	formatSource(source,
+		"package formatterbugs;\n" + 
+		"\n" + 
+		"public class Bug431523e {\n" + 
+		"	static void foo() {\n" + 
+		"		System.out.println();\n" + 
+		"/*q*/\n" + 
+		" System   .   out   .   println   (   )   ;\n" + 
+		"/*e*/\n" + 
+		"//*q*/\n" + 
+		"  System   .   out   .   println   (   )   ;\n" + 
+		"//*e*/\n" + 
+		"///*q*/\n" + 
+		"   System   .   out   .   println   (   )   ;\n" + 
+		"///*e*/\n" + 
+		"////*q*/\n" + 
+		"    System   .   out   .   println   (   )   ;\n" + 
+		"////*e*/\n" + 
+		"		System.out.println();\n" + 
+		"	}\n" + 
+		"}\n" + 
+		""
+	);
 
 /**
  * @bug 332877: [formatter] line comment wrongly put on a new line

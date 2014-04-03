@@ -18,8 +18,18 @@ import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.jdt.core.*;
-import org.eclipse.jdt.core.compiler.*;
+import org.eclipse.jdt.core.IField;
+import org.eclipse.jdt.core.IImportDeclaration;
+import org.eclipse.jdt.core.IJavaElement;
+import org.eclipse.jdt.core.IMember;
+import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.ITypeParameter;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.Signature;
+import org.eclipse.jdt.core.compiler.CharOperation;
+import org.eclipse.jdt.core.compiler.InvalidInputException;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.env.AccessRuleSet;
 import org.eclipse.jdt.internal.compiler.parser.Scanner;
@@ -33,7 +43,20 @@ import org.eclipse.jdt.internal.core.search.IndexQueryRequestor;
 import org.eclipse.jdt.internal.core.search.JavaSearchScope;
 import org.eclipse.jdt.internal.core.search.StringOperation;
 import org.eclipse.jdt.internal.core.search.indexing.IIndexConstants;
-import org.eclipse.jdt.internal.core.search.matching.*;
+import org.eclipse.jdt.internal.core.search.matching.AndPattern;
+import org.eclipse.jdt.internal.core.search.matching.ConstructorPattern;
+import org.eclipse.jdt.internal.core.search.matching.FieldPattern;
+import org.eclipse.jdt.internal.core.search.matching.LocalVariablePattern;
+import org.eclipse.jdt.internal.core.search.matching.MatchLocator;
+import org.eclipse.jdt.internal.core.search.matching.MethodPattern;
+import org.eclipse.jdt.internal.core.search.matching.OrPattern;
+import org.eclipse.jdt.internal.core.search.matching.PackageDeclarationPattern;
+import org.eclipse.jdt.internal.core.search.matching.PackageReferencePattern;
+import org.eclipse.jdt.internal.core.search.matching.QualifiedTypeDeclarationPattern;
+import org.eclipse.jdt.internal.core.search.matching.SuperTypeReferencePattern;
+import org.eclipse.jdt.internal.core.search.matching.TypeDeclarationPattern;
+import org.eclipse.jdt.internal.core.search.matching.TypeParameterPattern;
+import org.eclipse.jdt.internal.core.search.matching.TypeReferencePattern;
 
 
 /**
@@ -873,16 +896,13 @@ public static final int[] getMatchingRegions(String pattern, String name, int ma
  * @since 3.10
  */
 public static boolean isSimpleTypeNameMatch(String pattern, String name) {
-	if (pattern == null) {
+	if (pattern == null || pattern.length() == 0) {
 		return true;
 	}
 	if (name == null) {
 		return false;
 	}
-	char[] patternChars = pattern.toCharArray();
-	char[] nameChars = name.toCharArray();
-	boolean camelCaseMatching = JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CODEASSIST_CAMEL_CASE_MATCH));
-	return !isFailedMatch(patternChars, nameChars, camelCaseMatching);
+	return isSimplerMatch(pattern,name);
 }
 /**
  * Answers true if the pattern resembles the given simple name. 
@@ -897,29 +917,26 @@ public static boolean isSimpleTypeNameMatch(String pattern, String name) {
  * @since 3.10
  */
 public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
-	if (pattern == null) {
+	if (pattern == null || pattern.length == 0) {
 		return true;
 	}
 	if (name == null) {
 		return false;
 	}
-	boolean camelCaseMatching = JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CODEASSIST_CAMEL_CASE_MATCH));
-	return !isFailedMatch(pattern, name, camelCaseMatching);
+	return isSimplerMatch(new String(pattern), new String(name));
 }
-private static boolean isFailedMatch(char[] pattern, char[] name, boolean camelCaseMatch) {
-	return !isJavaNameMatch(pattern, name)
-			&& !isCamelCaseNameMatch(pattern, name, camelCaseMatch);
-}
-private static boolean isCamelCaseNameMatch(char[] pattern, char[] name, boolean camelCaseMatch) {
-	return pattern != null && camelCaseMatch && CharOperation.camelCaseMatch(pattern, name);
-}
-private static boolean isJavaNameMatch(char[] patternChars, char[] nameChars) {
-	String pattern = new String(patternChars);
-	String[] subWordMatch = isSubWordMatch(pattern, new String(nameChars));
+private static boolean isSimplerMatch(String pattern, String name) {
+	String[] subWordMatch = isSubWordMatch(pattern, name);
 	if (DEBUG_SUBWORDS) {
-		System.out.println(pattern + ' ' + subWordMatch[0] + '\n' + subWordMatch[2] + '\n' + subWordMatch[1]);
+		System.out.println(subWordMatch[2] + ' ' + subWordMatch[1] + ':' + pattern + '"' + subWordMatch[0] + '"');
 	}
-	return subWordMatch[0] != NO_CHARS;
+	if (subWordMatch[0] != NO_CHARS) {
+		return true;
+	}
+	if (!JavaCore.ENABLED.equals(JavaCore.getOption(JavaCore.CODEASSIST_CAMEL_CASE_MATCH))) {
+		return false;
+	}
+	return CharOperation.camelCaseMatch(pattern.toCharArray(), name.toCharArray());
 }
 private static String[] isSubWordMatch(String pattern, String candidate) {
 	candidate = candidate.toLowerCase(Locale.ROOT);
@@ -927,28 +944,20 @@ private static String[] isSubWordMatch(String pattern, String candidate) {
 	String[] patternParts = NON_JAVA_PATTERN.split(pattern, -1);
 
 	String[] result = new String[] { NO_CHARS, NO_CHARS, candidate };
-	int index = 0;
-	for (String part : patternParts) {
-		int subIndex = -1;
-		for (int i = 0, n = candidateParts.length - index; i < n; i++) {
-			String[] wordMatch = isWordMatch(part, candidateParts[i + index]);
-			if (index != 0 || i != 0) {
-				result[1] += ' ';
-			}
-			result[1] += wordMatch[1];
-			if (wordMatch[0] != NO_CHARS) {
-				result[0] += wordMatch[0];
-				subIndex = i + index;
-				break;
-			}
+	if (patternParts.length > candidateParts.length) {
+		return result;
+	}
+	for (int i = 0; i < patternParts.length; i++) {
+		String[] wordMatch = isWordMatch(patternParts[i], candidateParts[i]);
+		if (i != 0) {
+			result[1] += ' ';
 		}
-		index = subIndex;
-		if (index == -1) {
+		result[1] += wordMatch[1];
+		if (wordMatch[0] == NO_CHARS) {
+			result[0] = NO_CHARS;
 			break;
 		}
-	}
-	if (index == -1) {
-		result[0] = NO_CHARS;
+		result[0] += wordMatch[0];
 	}
 	return result;
 }

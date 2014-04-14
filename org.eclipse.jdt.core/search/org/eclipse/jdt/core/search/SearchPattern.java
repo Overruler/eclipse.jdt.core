@@ -893,7 +893,7 @@ public static final int[] getMatchingRegions(String pattern, String name, int ma
  * @param pattern the given pattern
  * @param name the given name
  * @return true if the pattern matches the given name, false otherwise
- * @since 3.10
+ * @since 3.11
  */
 public static boolean isSimpleTypeNameMatch(String pattern, String name) {
 	if (pattern == null || pattern.length() == 0) {
@@ -914,7 +914,7 @@ public static boolean isSimpleTypeNameMatch(String pattern, String name) {
  * @param name the given name
  * @return true if the pattern matches the given name, false otherwise
  * 
- * @since 3.10
+ * @since 3.11
  */
 public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
 	if (pattern == null || pattern.length == 0) {

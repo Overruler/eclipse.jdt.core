@@ -413,7 +413,7 @@ public class SearchableEnvironment
 				}
 			};
 			
-			int matchRule = SearchPattern.R_PREFIX_MATCH;
+			int matchRule = SearchPattern.R_SIMPLE_MATCH;
 			if (camelCaseMatch) matchRule |= SearchPattern.R_CAMELCASE_MATCH;
 			if (monitor != null) {
 				IndexManager indexManager = JavaModelManager.getIndexManager();

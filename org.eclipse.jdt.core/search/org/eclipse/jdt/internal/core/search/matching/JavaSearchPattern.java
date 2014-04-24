@@ -6,6 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
+ *     Timo Kinnunen - Contributions for bug 377373 - [subwords] known limitations with JDT 3.8
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package org.eclipse.jdt.internal.core.search.matching;
@@ -66,7 +67,8 @@ public class JavaSearchPattern extends SearchPattern implements IIndexConstants 
 		| R_PATTERN_MATCH
 		| R_REGEXP_MATCH
 		| R_CAMELCASE_MATCH
-		| R_CAMELCASE_SAME_PART_COUNT_MATCH;
+		| R_CAMELCASE_SAME_PART_COUNT_MATCH
+		| R_SIMPLE_MATCH;
 
 	/**
 	 * Mask used on match rule for generic relevance.
@@ -85,7 +87,7 @@ public class JavaSearchPattern extends SearchPattern implements IIndexConstants 
 		// Use getMatchRule() instead of matchRule as super constructor may modify its value
 		// see bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=81377
 		int rule = getMatchRule();
-		this.isCaseSensitive = (rule & R_CASE_SENSITIVE) != 0;
+		this.isCaseSensitive = (rule & (R_CASE_SENSITIVE | R_SIMPLE_MATCH)) != 0;
 		this.isCamelCase = (rule & (R_CAMELCASE_MATCH | R_CAMELCASE_SAME_PART_COUNT_MATCH)) != 0;
 		this.matchCompatibility = rule & MATCH_COMPATIBILITY_MASK;
 		this.matchMode = rule & MATCH_MODE_MASK;
@@ -355,6 +357,9 @@ public class JavaSearchPattern extends SearchPattern implements IIndexConstants 
 				break;
 			case R_CAMELCASE_SAME_PART_COUNT_MATCH:
 				output.append("camel case same part count match, "); //$NON-NLS-1$
+				break;
+			case R_SIMPLE_MATCH:
+				output.append("simple match, "); //$NON-NLS-1$
 				break;
 		}
 		if (isCaseSensitive())

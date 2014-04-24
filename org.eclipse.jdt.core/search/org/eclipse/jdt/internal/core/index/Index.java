@@ -6,6 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
+ *     Timo Kinnunen - Contributions for bug 377373 - [subwords] known limitations with JDT 3.8
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package org.eclipse.jdt.internal.core.index;
@@ -48,7 +49,8 @@ static final int MATCH_RULE_INDEX_MASK =
 	SearchPattern.R_REGEXP_MATCH |
 	SearchPattern.R_CASE_SENSITIVE |
 	SearchPattern.R_CAMELCASE_MATCH |
-	SearchPattern.R_CAMELCASE_SAME_PART_COUNT_MATCH;
+	SearchPattern.R_CAMELCASE_SAME_PART_COUNT_MATCH |
+	SearchPattern.R_SIMPLE_MATCH;
 
 public static boolean isMatch(char[] pattern, char[] word, int matchRule) {
 	if (pattern == null) return true;
@@ -82,6 +84,9 @@ public static boolean isMatch(char[] pattern, char[] word, int matchRule) {
 		// same part count is not activated because index key may have uppercase letters after the type name
 		case SearchPattern.R_CAMELCASE_SAME_PART_COUNT_MATCH | SearchPattern.R_CASE_SENSITIVE :
 			return (pattern[0] == word[0] && CharOperation.camelCaseMatch(pattern, word, false));
+		case SearchPattern.R_SIMPLE_MATCH :
+		case SearchPattern.R_SIMPLE_MATCH | SearchPattern.R_CAMELCASE_MATCH :
+			return SearchPattern.isSimpleTypeNameMatch(pattern, word);
 	}
 	return false;
 }

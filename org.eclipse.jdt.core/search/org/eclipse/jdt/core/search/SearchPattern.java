@@ -227,12 +227,39 @@ public abstract class SearchPattern {
 	 */
 	public static final int R_CAMELCASE_SAME_PART_COUNT_MATCH = 0x0100;
 
+	/**
+	 * Match rule: The search pattern contains a search expression that a
+	 * human might type.
+	 * <br>
+	 * Examples:
+	 * <ul>
+	 * 	<li>'listArr' type string pattern might match 'ArrayList' and 
+	 *      'MedalistStarRankings' types.
+	 * 	</li>
+	 * 	<li>'listArray' type string pattern might still match previous 'ArrayList' type,
+	 * 		but not 'MedalistStarRankings' because it doesn't contain an 'y'.
+	 * 	</li>
+	 * </ul>
+	 *
+	 * This rule is not intended to be combined with any other match rule. In case
+	 * of other match rule flags are combined with this one, then match rule validation
+	 * will return a modified rule in order to perform a better appropriate search request
+	 * (see {@link #validateMatchRule(String, int)} for more details).
+	 * <p>
+	 * @see SearchPattern#isSimpleTypeNameMatch(char[], char[]) for an
+	 * explanation of Simple matching.
+	 *<p>
+	 * @since 3.11
+	 */
+	public static final int R_SIMPLE_MATCH = 0x0200;
+
 	private static final int MODE_MASK = R_EXACT_MATCH
 		| R_PREFIX_MATCH
 		| R_PATTERN_MATCH
 		| R_REGEXP_MATCH
 		| R_CAMELCASE_MATCH
-		| R_CAMELCASE_SAME_PART_COUNT_MATCH;
+		| R_CAMELCASE_SAME_PART_COUNT_MATCH
+		| R_SIMPLE_MATCH;
 
 	private int matchRule;
 
@@ -274,6 +301,7 @@ public abstract class SearchPattern {
  * 		<li>{@link #R_REGEXP_MATCH}</li>
  * 		<li>{@link #R_CAMELCASE_MATCH}</li>
  * 		<li>{@link #R_CAMELCASE_SAME_PART_COUNT_MATCH}</li>
+ * 		<li>{@link #R_SIMPLE_MATCH}</li>
  * 	</ul>
  * 	which may be also combined with one of following flag:
  * 	<ul>
@@ -905,15 +933,16 @@ public static boolean isSimpleTypeNameMatch(String pattern, String name) {
 	return isSimplerMatch(pattern,name);
 }
 /**
- * Answers true if the pattern resembles the given simple name. 
- * 
- * @see CharOperation#match(char[], char[], boolean) for more details on the
- * 	pattern match behavior
+ * Answers true if the pattern resembles the given simple name. The exact details 
+ * of the algorithm are left intentionally vague, however typically a prefix match
+ * or a Camel-Case match would be more strict than this algorithm. This method 
+ * is intended for filtering type name proposals in real-time based on user input, 
+ * for example during code completion. Simple type matching does NOT accept explicit 
+ * wild-cards '*' and '?' and may be case sensitive.
  * 
  * @param pattern the given pattern
  * @param name the given name
  * @return true if the pattern matches the given name, false otherwise
- * 
  * @since 3.11
  */
 public static boolean isSimpleTypeNameMatch(char[] pattern, char[] name) {
@@ -2595,6 +2624,9 @@ public boolean matchesName(char[] pattern, char[] name) {
 			case SearchPattern.R_CAMELCASE_SAME_PART_COUNT_MATCH:
 				return matchFirstChar && CharOperation.camelCaseMatch(pattern, name, true);
 
+			case R_SIMPLE_MATCH :
+				return true;
+
 			case R_REGEXP_MATCH :
 				// TODO implement regular expression match
 				return true;
@@ -2689,7 +2721,9 @@ public static int validateMatchRule(String stringPattern, int matchRule) {
 		boolean validCamelCase = validateCamelCasePattern(stringPattern);
 		if (!validCamelCase) {
 			matchRule &= ~R_CAMELCASE_MATCH;
-			matchRule |= R_PREFIX_MATCH;
+			if ((matchRule & R_SIMPLE_MATCH) == 0) {
+				matchRule |= R_PREFIX_MATCH;
+			}
 		}
 		return matchRule;
 	}

@@ -6,6 +6,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
+ *     Timo Kinnunen - Contributions for bug 377373 - [subwords] known limitations with JDT 3.8
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
 package org.eclipse.jdt.internal.codeassist;
@@ -24,6 +25,7 @@ public interface RelevanceConstants {
 	int R_DEFAULT = 5;
 	int R_INTERESTING = 5;
 	int R_CASE = 10;
+	int R_EXACT_LENGTH = 20;
 	int R_CAMEL_CASE = 5;
 	int R_EXACT_NAME = 4;
 	int R_PREFIX = 3;

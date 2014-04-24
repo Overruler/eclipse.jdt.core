@@ -4115,34 +4115,36 @@ public final class CompletionEngine
 		return 0;
 	}
 	int computeRelevanceForCaseMatching(char[] token, char[] proposalName){
+		int lengthRelevance = token == null || proposalName == null || proposalName.length < token.length
+				|| token.length <= 1 ? 0 : Math.max(0, R_EXACT_LENGTH - proposalName.length + token.length);
 		if (this.options.camelCaseMatch) {
 			if(CharOperation.equals(token, proposalName, true /* do not ignore case */)) {
-				return R_CASE + R_EXACT_NAME;
+				return lengthRelevance + R_CASE + R_EXACT_NAME;
 			} else if (CharOperation.prefixEquals(token, proposalName, true /* do not ignore case */)) {
-				return R_CASE + R_PREFIX;
+				return lengthRelevance + R_CASE + R_PREFIX;
 			} else if (CharOperation.camelCaseMatch(token, proposalName)){
-				return R_CAMEL_CASE;
+				return lengthRelevance + R_CAMEL_CASE;
 			} else if(CharOperation.prefixEquals(token, proposalName, false /* ignore case */)) {
 				if(CharOperation.equals(token, proposalName, false /* ignore case */)) {
-					return R_EXACT_NAME;
+					return lengthRelevance + R_EXACT_NAME;
 				} else {
-					return R_PREFIX;
+					return lengthRelevance + R_PREFIX;
 				}
 			}
 		} else if (CharOperation.prefixEquals(token, proposalName, true /* do not ignore case */)) {
 			if(CharOperation.equals(token, proposalName, true /* do not ignore case */)) {
-				return R_CASE + R_EXACT_NAME;
+				return lengthRelevance + R_CASE + R_EXACT_NAME;
 			} else {
-				return R_CASE + R_PREFIX;
+				return lengthRelevance + R_CASE + R_PREFIX;
 			}
 		} else if(CharOperation.prefixEquals(token, proposalName, false /* ignore case */)) {
 			if(CharOperation.equals(token, proposalName, false /* ignore case */)) {
-				return R_EXACT_NAME;
+				return lengthRelevance + R_EXACT_NAME;
 			} else {
-				return R_PREFIX;
+				return lengthRelevance + R_PREFIX;
 			}
 		}
-		return 0;
+		return lengthRelevance;
 	}
 
 	private int computeRelevanceForClass(){

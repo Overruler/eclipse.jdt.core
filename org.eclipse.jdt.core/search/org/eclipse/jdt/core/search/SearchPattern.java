@@ -974,7 +974,6 @@ private static String[] isWordMatch(String pattern, String candidate) {
 		if (Character.isJavaIdentifierPart(codepoint)) {
 			if (Character.isUpperCase(codepoint)) {
 				codepoint = Character.toLowerCase(codepoint);
-			} else {
 				index = 0;
 			}
 			char[] chars2 = Character.toChars(codepoint);
